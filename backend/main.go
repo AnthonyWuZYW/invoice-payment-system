@@ -1,23 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 )
-
-type PaymentRequest struct {
-	InvoiceID int     `json:"invoice_id"`
-	Amount    float64 `json:"amount"`
-}
-
-type APIResponse struct {
-	Status  string      `json:"status"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
-}
 
 // Middleware Handling CORS unblocking response
 func enableCORS(next http.Handler) http.Handler {
@@ -34,40 +22,6 @@ func enableCORS(next http.Handler) http.Handler {
 	})
 }
 
-func sendJSONResponse(w http.ResponseWriter, code int, payload interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(payload)
-}
-
-func sendJSONError(w http.ResponseWriter, message string, code int) {
-	sendJSONResponse(w, code, APIResponse{Status: "error", Message: message})
-}
-
-func paymentHandler(w http.ResponseWriter, r *http.Request) {
-	// Allow Post
-	if r.Method != http.MethodPost {
-		sendJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req PaymentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONError(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// Reveived Payment
-	fmt.Printf("Success: Received %f for Invoice %d\n", req.Amount, req.InvoiceID)
-
-	// Send Success response
-	sendJSONResponse(w, http.StatusCreated, APIResponse{
-		Status:  "success",
-		Message: "Payment processed successfully",
-		Data:    req,
-	})
-}
-
 func main() {
 	// Set the port
 	mux := http.NewServeMux()
@@ -81,12 +35,15 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	fmt.Println("Server listening on http://localhost:8080")
+	// Initalize Database
+	fmt.Println("Initalize Database")
+	db = initDB()
+	defer db.Close()
 
+	fmt.Println("Server listening on http://localhost:8080")
 	// Start Server
 	err := server.ListenAndServe()
 	if err != nil {
 		log.Fatal("Server failed: ", err)
 	}
-
 }
