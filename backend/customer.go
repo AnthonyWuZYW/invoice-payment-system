@@ -34,7 +34,13 @@ func CustomerDispatcher(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		detail, err := getCustomerInvoices(customerID)
+		// Read Filter Query Parameters
+		status := r.URL.Query().Get("status")
+		fromDate := r.URL.Query().Get("from")
+		toDate := r.URL.Query().Get("to")
+
+		// Pass filters to the logic function
+		detail, err := getCustomerInvoices(customerID, status, fromDate, toDate)
 		if err != nil {
 			sendJSONError(w, err.Error(), http.StatusNotFound)
 			return
@@ -69,11 +75,11 @@ func createCustomer(name string) (int64, error) {
 	return result.LastInsertId()
 }
 
-// Get a Customer Detail by ID
-func getCustomerInvoices(customerID int) (*CustomerDetail, error) {
+// getCustomerInvoicesFiltered applies the required filters to the customer's portfolio
+func getCustomerInvoices(customerID int, status string, from string, to string) (*CustomerDetail, error) {
 	var detail CustomerDetail
 	detail.CustomerID = customerID
-	detail.Invoices = []InvoiceRecord{} // Initialize as empty slice for clean JSON
+	detail.Invoices = []InvoiceRecord{}
 
 	// Get Customer Name
 	err := db.QueryRow("SELECT name FROM customers WHERE id = ?", customerID).Scan(&detail.Name)
@@ -84,15 +90,33 @@ func getCustomerInvoices(customerID int) (*CustomerDetail, error) {
 		return nil, err
 	}
 
-	// Get All Invoices for this Customer
+	// Base Query
 	query := `SELECT id, amount, currency, issued_at, due_at, status 
               FROM invoices 
-              WHERE customer_id = ? 
-              ORDER BY issued_at DESC`
+              WHERE customer_id = ?`
 
-	rows, err := db.Query(query, customerID)
+	args := []interface{}{customerID}
+
+	// Dynamically Append Filters
+	if status != "" {
+		query += " AND status = ?"
+		args = append(args, status)
+	}
+	if from != "" {
+		query += " AND issued_at >= ?"
+		args = append(args, from)
+	}
+	if to != "" {
+		query += " AND issued_at <= ?"
+		args = append(args, to)
+	}
+
+	query += " ORDER BY issued_at DESC"
+
+	// Execute
+	rows, err := db.Query(query, args...)
 	if err != nil {
-		return &detail, nil // Return name even if no invoices found
+		return &detail, nil
 	}
 	defer rows.Close()
 

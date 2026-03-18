@@ -40,7 +40,11 @@ function App() {
   // State for the Modal and Form Data Add Invocie and Payment
   const [invoiceModal, setInvoiceModal] = useState(false);
   const [paymentModal, setPaymentModal] = useState(false);
-
+  
+  // Filters for search
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   const [invoiceFormData, setInvoiceForm] = useState({ 
     name: '',
@@ -123,12 +127,15 @@ function App() {
     }
   };
 
-  {/* Invoice search Logic */}
+ {/* Invoice search Logic */}
   const handleInvoiceSearch = async () => {
     if (!searchId) return;
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/invoices/${searchId}`);
+      // Append query params for filtering
+      const url = new URL(`http://localhost:8080/api/invoices/${searchId}`);
+
+      const response = await fetch(url.toString());
       const result = await response.json();
       
       if (response.ok) {
@@ -149,12 +156,17 @@ function App() {
     if (!customerSearchId) return;
     setCustomerLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/customers/${customerSearchId}/invoices`);
+      const url = new URL(`http://localhost:8080/api/customers/${customerSearchId}/invoices`);
+      if (fromDate) url.searchParams.append('from', fromDate);
+      if (toDate) url.searchParams.append('to', toDate);
+      if (statusFilter) url.searchParams.append('status', statusFilter);
+
+      const response = await fetch(url.toString());
       const result = await response.json();
       
       if (response.ok) {
         setCustomerDetail(result.data); 
-        setPortfolioModal(true); // Open the modal on success
+        setPortfolioModal(true);
       } else {
         alert("Customer not found or no invoices");
         setCustomerDetail(null);
@@ -224,6 +236,143 @@ function App() {
           </div>
         </div>
       )}
+  
+
+      {/* Search for Customer Modal */}
+      <div className="search-section" style={{ margin: '30px 0', textAlign: 'center' }}>
+        <h2 className="search-bar-title">Customer Lookup</h2>
+
+        {/*  Filter Bar */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'flex-end', 
+          gap: '12px', 
+          marginBottom: '20px',
+          padding: '10px'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <label style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>FROM</label>
+            <input 
+              type="date" 
+              value={fromDate} 
+              onChange={(e) => setFromDate(e.target.value)} 
+              style={{ padding: '6px', border: '1px solid #ccc', borderRadius: '4px' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <label style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>TO</label>
+            <input 
+              type="date" 
+              value={toDate} 
+              onChange={(e) => setToDate(e.target.value)} 
+              style={{ padding: '6px', border: '1px solid #ccc', borderRadius: '4px' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <label style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>STATUS</label>
+            <select 
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{ padding: '7px', border: '1px solid #ccc', borderRadius: '4px'}}
+            >
+              <option value="">ALL</option>
+              <option value="DRAFT">DRAFT</option>
+              <option value="PENDING">PENDING</option>
+              <option value="PAID">PAID</option>
+              <option value="VOID">VOID</option>
+            </select>
+          </div>
+
+          <button 
+            onClick={() => { setFromDate(''); setToDate(''); setStatusFilter(''); }}
+            style={{ 
+              padding: '7px 12px', 
+              fontSize: '12px', 
+              border: '1px solid #ccc', 
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Clear
+          </button>
+        </div>
+
+        <input 
+          type="number" 
+          placeholder="Enter Customer ID to view details..." 
+          value={customerSearchId}
+          onChange={(e) => setCustomerSearchId(e.target.value)}
+          style={{ padding: '10px', width: '250px', borderRadius: '4px 0 0 4px', border: '1px solid #ccc' }}
+        />
+        <button 
+          onClick={handleCustomerSearch}
+          style={{ padding: '10px 20px', borderRadius: '0 4px 4px 0', cursor: 'pointer' }}
+        >
+          {customerLoading ? 'Searching...' : 'Search'}
+        </button>
+      </div>
+
+  
+      {/* Portfolio Search Result Modal */}
+      {portfolioModal && customerDetail && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ textAlign: 'left', minWidth: '700px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2>Portfolio: {customerDetail.name}</h2>
+              <button onClick={() => setPortfolioModal(false)} style={{ background: 'none', color: '#666', fontSize: '24px', cursor: 'pointer', border: 'none' }}>&times;</button>
+            </div>
+            
+            <hr />
+
+            <table className="portfolio-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '15px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #eee', textAlign: 'left' }}>
+                  <th style={{ padding: '10px' }}>ID</th>
+                  <th style={{ padding: '10px' }}>Amount</th>
+                  <th style={{ padding: '10px' }}>Status</th>
+                  <th style={{ padding: '10px' }}>Issue Date</th>
+                  <th style={{ padding: '10px' }}>Due Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {customerDetail.invoices && customerDetail.invoices.length > 0 ? (
+                  customerDetail.invoices.map((inv) => (
+                    <tr key={inv.id} style={{ borderBottom: '1px solid #f9f9f9' }}>
+                      <td style={{ padding: '10px' }}>#{inv.id}</td>
+                      <td style={{ padding: '10px', fontWeight: 'bold' }}>
+                        {inv.currency} {inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      <td style={{ padding: '10px' }}>
+                        <span className={`status-badge ${inv.status.toLowerCase()}`}>
+                          {inv.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px' }}>{inv.issued_at.split('T')[0]}</td>
+                      <td style={{ padding: '10px' }}>{inv.due_at.split('T')[0]}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} style={{ padding: '20px', textAlign: 'center' }}>No invoices found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+
+            <div style={{ marginTop: '25px', textAlign: 'right' }}>
+              <button 
+                onClick={() => setPortfolioModal(false)} 
+                style={{ background: 'var(--accent)', color: 'white', padding: '10px 20px' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search for Invoice Modal */}
       <div className="search-section" style={{ margin: '30px 0', textAlign: 'center' }}>
@@ -282,82 +431,6 @@ function App() {
           
         </div>
       </div>
-      )}
-
-      {/* Search for Customer Modal */}
-      <div className="search-section" style={{ margin: '30px 0', textAlign: 'center' }}>
-        <h2 className="search-bar-title">Customer Lookup</h2>
-
-        <input 
-          type="number" 
-          placeholder="Enter Customer ID to view details..." 
-          value={customerSearchId}
-          onChange={(e) => setCustomerSearchId(e.target.value)}
-          style={{ padding: '10px', width: '250px', borderRadius: '4px 0 0 4px', border: '1px solid #ccc' }}
-        />
-        <button 
-          onClick={handleCustomerSearch}
-          style={{ padding: '10px 20px', borderRadius: '0 4px 4px 0', cursor: 'pointer' }}
-        >
-          {customerLoading ? 'Searching...' : 'Search'}
-        </button>
-      </div>
-
-  
-      {/* Portfolio Search Result Modal */}
-      {portfolioModal && customerDetail && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ textAlign: 'left', minWidth: '700px', maxHeight: '85vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2>Portfolio: {customerDetail.name}</h2>
-              <button onClick={() => setPortfolioModal(false)} style={{ background: 'none', color: '#666', fontSize: '24px', cursor: 'pointer', border: 'none' }}>&times;</button>
-            </div>
-            
-            <hr />
-
-            <table className="portfolio-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '15px' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #eee', textAlign: 'left' }}>
-                  <th style={{ padding: '10px' }}>ID</th>
-                  <th style={{ padding: '10px' }}>Amount</th>
-                  <th style={{ padding: '10px' }}>Status</th>
-                  <th style={{ padding: '10px' }}>Due Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customerDetail.invoices && customerDetail.invoices.length > 0 ? (
-                  customerDetail.invoices.map((inv) => (
-                    <tr key={inv.id} style={{ borderBottom: '1px solid #f9f9f9' }}>
-                      <td style={{ padding: '10px' }}>#{inv.id}</td>
-                      <td style={{ padding: '10px', fontWeight: 'bold' }}>
-                        {inv.currency} {inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ padding: '10px' }}>
-                        <span className={`status-badge ${inv.status.toLowerCase()}`}>
-                          {inv.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px' }}>{inv.due_at.split('T')[0]}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={4} style={{ padding: '20px', textAlign: 'center' }}>No invoices found.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-
-            <div style={{ marginTop: '25px', textAlign: 'right' }}>
-              <button 
-                onClick={() => setPortfolioModal(false)} 
-                style={{ background: 'var(--accent)', color: 'white', padding: '10px 20px' }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     
     </div>
