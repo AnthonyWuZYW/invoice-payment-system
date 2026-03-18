@@ -65,6 +65,7 @@ function App() {
   const [customerSearchId, setCustomerSearchId] = useState('');
   const [customerDetail, setCustomerDetail] = useState<CustomerDetail | null>(null);
   const [customerLoading, setCustomerLoading] = useState(false);
+  const [portfolioModal, setPortfolioModal] = useState(false); 
 
 
   {/* Send Invoice Logic */}
@@ -152,7 +153,8 @@ function App() {
       const result = await response.json();
       
       if (response.ok) {
-        setCustomerDetail(result.data); // result.data should be an array []
+        setCustomerDetail(result.data); 
+        setPortfolioModal(true); // Open the modal on success
       } else {
         alert("Customer not found or no invoices");
         setCustomerDetail(null);
@@ -268,17 +270,21 @@ function App() {
           ) : (
             <p>No payments recorded.</p>
           )}
+          <div style={{ marginTop: '25px', textAlign: 'right' }}>
+            <button 
+              onClick={() => setSelectedInvoice(null)} 
+              style={{ marginTop: '20px', background: 'var(--accent)', padding: '4px 10px' }}
+            >
+              Close
+            </button>
+          </div>
 
-          <button 
-            onClick={() => setSelectedInvoice(null)} 
-            style={{ marginTop: '20px', background: 'var(--accent)' }}
-          >
-            Close
-          </button>
+          
         </div>
       </div>
       )}
 
+      {/* Search for Customer Modal */}
       <div className="search-section" style={{ margin: '30px 0', textAlign: 'center' }}>
         <h2 className="search-bar-title">Customer Lookup</h2>
 
@@ -298,46 +304,59 @@ function App() {
       </div>
 
   
-      {/* Customer Invoices Table */}
-      {customerDetail && (
-        <div style={{ marginTop: '30px', textAlign: 'left' }}>
-          <h3 style={{ marginBottom: '15px' }}>Invoices for: {customerDetail.name}</h3>
-          <table className="portfolio-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                <th style={{ padding: '12px' }}>Inv ID</th>
-                <th style={{ padding: '12px' }}>Issue Date</th>
-                <th style={{ padding: '12px' }}>Amount</th>
-                <th style={{ padding: '12px' }}>Status</th>
-                <th style={{ padding: '12px' }}>Due Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customerDetail.invoices && customerDetail.invoices.length > 0 ? (
-                customerDetail.invoices.map((inv) => (
-                  <tr key={inv.id} style={{ borderBottom: '1px solid #edf2f7' }}>
-                    <td style={{ padding: '12px' }}>#{inv.id}</td>
-                    <td style={{ padding: '12px' }}>{inv.issued_at.split('T')[0]}</td>
-                    <td style={{ padding: '12px', fontWeight: 'bold' }}>
-                      {inv.currency} {inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </td>
-                    <td style={{ padding: '12px' }}>
-                      <span className={`status-badge ${inv.status.toLowerCase()}`}>
-                        {inv.status}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px' }}>{inv.due_at.split('T')[0]}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#718096' }}>
-                    No invoices found for this customer.
-                  </td>
+      {/* Portfolio Search Result Modal */}
+      {portfolioModal && customerDetail && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ textAlign: 'left', minWidth: '700px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2>Portfolio: {customerDetail.name}</h2>
+              <button onClick={() => setPortfolioModal(false)} style={{ background: 'none', color: '#666', fontSize: '24px', cursor: 'pointer', border: 'none' }}>&times;</button>
+            </div>
+            
+            <hr />
+
+            <table className="portfolio-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '15px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #eee', textAlign: 'left' }}>
+                  <th style={{ padding: '10px' }}>ID</th>
+                  <th style={{ padding: '10px' }}>Amount</th>
+                  <th style={{ padding: '10px' }}>Status</th>
+                  <th style={{ padding: '10px' }}>Due Date</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {customerDetail.invoices && customerDetail.invoices.length > 0 ? (
+                  customerDetail.invoices.map((inv) => (
+                    <tr key={inv.id} style={{ borderBottom: '1px solid #f9f9f9' }}>
+                      <td style={{ padding: '10px' }}>#{inv.id}</td>
+                      <td style={{ padding: '10px', fontWeight: 'bold' }}>
+                        {inv.currency} {inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      <td style={{ padding: '10px' }}>
+                        <span className={`status-badge ${inv.status.toLowerCase()}`}>
+                          {inv.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px' }}>{inv.due_at.split('T')[0]}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} style={{ padding: '20px', textAlign: 'center' }}>No invoices found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+
+            <div style={{ marginTop: '25px', textAlign: 'right' }}>
+              <button 
+                onClick={() => setPortfolioModal(false)} 
+                style={{ background: 'var(--accent)', color: 'white', padding: '10px 20px' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     
