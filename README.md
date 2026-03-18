@@ -4,7 +4,7 @@ This application is a full-stack solution for managing customer invoices and tra
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ### 1. Prerequisites
 * **Go** (1.20 or higher)
@@ -54,17 +54,18 @@ The frontend provides a dashboard for creating invoices, recording payments, and
 * **Payment Processing:** Record partial or full payments via `/api/invoices/{id}/payments`.
 * **Automatic Transitions:** Invoices automatically move from `PENDING` to `PAID` once the balance reaches zero.
 * **Customer Portfolio:** Dedicated search to list all invoices associated with a specific Customer ID.
+* **Advanced Filtering:** The lookup and portfolio endpoints support query parameters to filter results by **Status** (`DRAFT`, `PENDING`, `PAID`, `VOID`) and **Date Range** (`from` / `to` issued dates).
 
 ### Business Rules & Data Integrity
 * **No Overpayment:** The system calculates the remaining balance and rejects any payment that would exceed the total invoice amount.
 * **Positive Validation:** Only positive payment amounts are accepted.
 * **Status Locking:** Payments are strictly blocked for invoices marked as `PAID` or `VOID`.
-* **Concurrency Control:** All payment logic is wrapped in **SQL Transactions (`BEGIN/COMMIT`)**. This prevents "Double Counting" or race conditions if multiple payments hit the API simultaneously.
+* **Concurrency & Double-Counting:** To prevent race conditions where two payments might arrive at the exact same millisecond, the system utilizes **SQL Transactions (`BEGIN/COMMIT`)** with row-level locking. By calculating the current sum of payments inside the transaction, we ensure that the second payment "sees" the first one already recorded, effectively preventing overpayment and double-counting in high-traffic scenarios.
 
 ---
 
 ## 🧪 Testing the API
-You can verify the business rules using `curl`:
+You can verify the business rules and filtering using `curl`:
 
 **Record a Valid Payment:**
 ```bash
