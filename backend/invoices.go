@@ -29,11 +29,11 @@ type InvoiceRecord struct {
 }
 
 type InvoiceDetail struct {
-	InvoiceRecord                 // Reuse your existing struct fields
-	Payments      []PaymentRecord `json:"payments"`
+	InvoiceRecord
+	Payments []PaymentRecord `json:"payments"`
 }
 
-func InvoicesDispatcher(w http.ResponseWriter, r *http.Request) {
+func invoicesDispatcher(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		handleCreateInvoice(w, r)
@@ -59,7 +59,6 @@ func handleCreateInvoice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(req)
 	// Create the Invoice
 	invoiceID, err := createInvoice(int(customerID), req.Amount, req.Currency, req.IssueDate, req.DueDate)
 	if err != nil {

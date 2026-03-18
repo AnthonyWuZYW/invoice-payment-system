@@ -13,7 +13,7 @@ type PaymentRecord struct {
 	PaidAt    string  `json:"paid_at"`
 }
 
-func paymentHandler(w http.ResponseWriter, r *http.Request) {
+func paymentDispatcher(w http.ResponseWriter, r *http.Request) {
 	// Allow Post
 	if r.Method != http.MethodPost {
 		sendJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)

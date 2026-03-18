@@ -6,6 +6,16 @@ interface Payment {
   paid_at: string;
 }
 
+interface Invoice {
+  id: number;
+  name: string;
+  amount: number;
+  currency: string;
+  status: string;
+  issued_at: string;
+  due_at: string;
+}
+
 interface InvoiceDetail {
   id: number;
   name: string;
@@ -16,6 +26,14 @@ interface InvoiceDetail {
   due_at: string;
   payments: Payment[];
 }
+
+interface CustomerDetail {
+  id: number;
+	name: string  
+  invoices: Invoice[];
+}
+
+
 
 function App() {
 
@@ -38,13 +56,15 @@ function App() {
     amount: '' 
   });
 
-
   // State for Get Inovice and Payment
   const [searchId, setSearchId] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(false);
-  
-  
+
+  // State for Get Customer invoices
+  const [customerSearchId, setCustomerSearchId] = useState('');
+  const [customerDetail, setCustomerDetail] = useState<CustomerDetail | null>(null);
+  const [customerLoading, setCustomerLoading] = useState(false);
 
 
   {/* Send Invoice Logic */}
@@ -102,6 +122,7 @@ function App() {
     }
   };
 
+  {/* Invoice search Logic */}
   const handleInvoiceSearch = async () => {
     if (!searchId) return;
     setLoading(true);
@@ -119,6 +140,27 @@ function App() {
       alert("Error fetching invoice details");
     } finally {
       setLoading(false);
+    }
+  };
+
+  {/* Customer search Logic */}
+  const handleCustomerSearch = async () => {
+    if (!customerSearchId) return;
+    setCustomerLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8080/api/customers/${customerSearchId}/invoices`);
+      const result = await response.json();
+      
+      if (response.ok) {
+        setCustomerDetail(result.data); // result.data should be an array []
+      } else {
+        alert("Customer not found or no invoices");
+        setCustomerDetail(null);
+      }
+    } catch (error) {
+      alert("Error fetching customer invoices");
+    } finally {
+      setCustomerLoading(false);
     }
   };
 
@@ -235,7 +277,69 @@ function App() {
           </button>
         </div>
       </div>
-    )}
+      )}
+
+      <div className="search-section" style={{ margin: '30px 0', textAlign: 'center' }}>
+        <h2 className="search-bar-title">Customer Lookup</h2>
+
+        <input 
+          type="number" 
+          placeholder="Enter Customer ID to view details..." 
+          value={customerSearchId}
+          onChange={(e) => setCustomerSearchId(e.target.value)}
+          style={{ padding: '10px', width: '250px', borderRadius: '4px 0 0 4px', border: '1px solid #ccc' }}
+        />
+        <button 
+          onClick={handleCustomerSearch}
+          style={{ padding: '10px 20px', borderRadius: '0 4px 4px 0', cursor: 'pointer' }}
+        >
+          {customerLoading ? 'Searching...' : 'Search'}
+        </button>
+      </div>
+
+  
+      {/* Customer Invoices Table */}
+      {customerDetail && (
+        <div style={{ marginTop: '30px', textAlign: 'left' }}>
+          <h3 style={{ marginBottom: '15px' }}>Invoices for: {customerDetail.name}</h3>
+          <table className="portfolio-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                <th style={{ padding: '12px' }}>Inv ID</th>
+                <th style={{ padding: '12px' }}>Issue Date</th>
+                <th style={{ padding: '12px' }}>Amount</th>
+                <th style={{ padding: '12px' }}>Status</th>
+                <th style={{ padding: '12px' }}>Due Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {customerDetail.invoices && customerDetail.invoices.length > 0 ? (
+                customerDetail.invoices.map((inv) => (
+                  <tr key={inv.id} style={{ borderBottom: '1px solid #edf2f7' }}>
+                    <td style={{ padding: '12px' }}>#{inv.id}</td>
+                    <td style={{ padding: '12px' }}>{inv.issued_at.split('T')[0]}</td>
+                    <td style={{ padding: '12px', fontWeight: 'bold' }}>
+                      {inv.currency} {inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <span className={`status-badge ${inv.status.toLowerCase()}`}>
+                        {inv.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px' }}>{inv.due_at.split('T')[0]}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#718096' }}>
+                    No invoices found for this customer.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     
     </div>
 
